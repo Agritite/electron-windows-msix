@@ -219,9 +219,10 @@ export const makeProgramOptions = async (options: PackagingOptions, manifestVars
   const appManifestLayout = path.join(layoutDir, `AppxManifest.xml`);
   const assetsLayout = path.join(layoutDir, `assets`);
   const appLayout = path.join(layoutDir, `app`);
-  const priConfig = path.join(layoutDir, 'priconfig.xml');
   const priFile =  path.join(layoutDir, 'resources.pri');
-  const createPri = options.createPri !== undefined ? options.createPri : true;
+  const createPri = options.createPri ?? true;
+  const createPriConfig = !options.priConfig;
+  const priConfigPath = options.priConfig ?? path.join(layoutDir, 'priconfig.xml');
   const publisher = options.manifestVariables?.publisher || manifestPublisher || '';
   const sign = options.sign !== undefined ? options.sign : true;
   let windowsSignOptions: WindowsSignOptions
@@ -272,9 +273,10 @@ export const makeProgramOptions = async (options: PackagingOptions, manifestVars
     cert_pfx,
     cert_cer,
     cert_pass: cert_pass || '',
-    priConfig,
     priFile,
     createPri,
+    createPriConfig,
+    priConfigPath,
     isSparsePackage,
     sign,
     windowsSignOptions,

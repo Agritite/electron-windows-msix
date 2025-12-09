@@ -111,6 +111,8 @@ export interface PackagingOptions {
   windowsKitPath ? : string;
   /** Indicates whether to create Pri resource files. It will be enabled by default. */
   createPri ? : boolean;
+  /** Optional path to priconfig.xml. If not set then one will be generated with `makepri createconfig`. Does nothing when createPri is false.*/
+  priConfig ? : string;
   /**
    * Indicates whether to sign the MSIX package. It will be enabled by default. If cert or signParams are not provided then the package will be signed with a dev cert.
    * If sign is false then the package will not be signed.
@@ -144,7 +146,8 @@ export interface ProgramOptions {
   cert_cer: string;
   cert_pass: string;
   createPri: boolean;
-  priConfig: string;
+  createPriConfig: boolean;
+  priConfigPath: string;
   priFile: string;
   isSparsePackage: boolean;
   sign: boolean;
