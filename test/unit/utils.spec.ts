@@ -828,6 +828,37 @@ describe('utils', () => {
       expect(log.debug).toHaveBeenCalledWith('No WindowsKitVersion provided. Will try AppxManifest.xml min OS version next.');
     });
 
+    it('should skip app manifest block and use default binaries when no appManifest and no packageMinOSVersion', async () => {
+      const packagingOptions: PackagingOptions = {
+        ...minimalPackagingOptions,
+        appManifest: undefined,
+        manifestVariables: {
+          publisher: 'Electron',
+          packageIdentity: 'com.electron.app',
+          packageVersion: '1.0.0.0',
+          appExecutable: 'app.exe',
+          targetArch: 'x64',
+        } as any,
+      }
+      vi.mocked(fs.pathExists).mockResolvedValueOnce(true as any);
+      const binaries = await locateMSIXTooling(packagingOptions);
+      expect(log.debug).toHaveBeenCalledWith('No information on WindowsKitVersion was provided, using default binaries. Checking if it exists....', expect.any(Object));
+      expect(binaries).toBeDefined();
+      expect(binaries?.makeAppx).toContain('10.0.26100.0');
+    });
+
+    it('should skip app manifest block when no appManifest and manifestVariables has no packageMinOSVersion', async () => {
+      const packagingOptions: PackagingOptions = {
+        appDir: 'C:\\app',
+        outputDir: 'C:\\out',
+        manifestVariables: undefined,
+      } as any
+      vi.mocked(fs.pathExists).mockResolvedValueOnce(true as any);
+      const binaries = await locateMSIXTooling(packagingOptions);
+      expect(log.debug).toHaveBeenCalledWith('No information on WindowsKitVersion was provided, using default binaries. Checking if it exists....', expect.any(Object));
+      expect(binaries).toBeDefined();
+    });
+
     it('should return x64 binaries if the target arch is arm64 and the windows kit version is older than 10.0.22621.0', async () => {
       const packagingOptions: PackagingOptions = {
         ...minimalPackagingOptions,
@@ -874,6 +905,23 @@ describe('utils', () => {
       }
       await locateMSIXTooling(packagingOptions, { manifestPackageArch: 'arm64' } as any);
       expect(log.error).toHaveBeenCalledWith("Couldn't find Windows Kit version in AppManifest.");
+    });
+
+    it('should use packageMinOSVersion from manifestVariables when appManifest is not set', async () => {
+      const packagingOptions: PackagingOptions = {
+        ...minimalPackagingOptions,
+        appManifest: undefined,
+        manifestVariables: {
+          ...minimalPackagingOptions.manifestVariables,
+          packageMinOSVersion: '10.0.22621.0',
+        } as any,
+      }
+      const binaries = await locateMSIXTooling(packagingOptions);
+      expect(binaries).toStrictEqual({
+        makeAppx: 'C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.22621.0\\x64\\makeappx.exe',
+        makePri: 'C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.22621.0\\x64\\makepri.exe',
+        makeCert: 'C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.22621.0\\x64\\makecert.exe',
+        signTool: 'C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.22621.0\\x64\\SignTool.exe'});
     });
 
     it('should return x64 binaries if the target arch is arm64 and the windows kit version is older than 10.0.22621.0', async () => {

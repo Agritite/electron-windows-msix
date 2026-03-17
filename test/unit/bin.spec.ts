@@ -79,6 +79,43 @@ describe('bin', () => {
     expect(log.error).toHaveBeenCalledWith('stderr of certutil', false, ['certutil: Error: oops']);
   });
 
+  it('should log stdout when process exits with non-zero code and stdout is non-empty', async () => {
+    vi.mocked(spawn).mockImplementationOnce(() => {
+      const emitter = new EventEmitter() as any;
+      setImmediate(() => {
+        emitter.stdout.emit('data', Buffer.from('some stdout output\n'));
+        emitter.stderr.emit('data', Buffer.from('stderr message'));
+        emitter.emit('exit', 1, null);
+      });
+
+      emitter.stdout = new EventEmitter();
+      emitter.stderr = new EventEmitter();
+      emitter.stdin = { end: vi.fn() };
+      return emitter;
+    });
+    await expect(getCertPublisher('C:\\cert.pfx', 'password')).rejects.toThrow('Failed running certutil Exit Code: 1 See previous errors for details');
+    expect(log.error).toHaveBeenCalledWith('stdout of certutil', false, ['some stdout output', '']);
+  });
+
+  it('should not log stderr when process exits with non-zero code and stderr is empty', async () => {
+    vi.mocked(log.error).mockClear();
+    vi.mocked(spawn).mockImplementationOnce(() => {
+      const emitter = new EventEmitter() as any;
+      setImmediate(() => {
+        emitter.stdout.emit('data', Buffer.from('stdout only\n'));
+        emitter.emit('exit', 1, null);
+      });
+
+      emitter.stdout = new EventEmitter();
+      emitter.stderr = new EventEmitter();
+      emitter.stdin = { end: vi.fn() };
+      return emitter;
+    });
+    await expect(getCertPublisher('C:\\cert.pfx', 'password')).rejects.toThrow('Failed running certutil Exit Code: 1 See previous errors for details');
+    expect(log.error).not.toHaveBeenCalledWith('stderr of certutil', expect.anything(), expect.anything());
+    expect(log.error).toHaveBeenCalledWith('stdout of certutil', false, ['stdout only', '']);
+  });
+
   it('should log an error if no publisher is found in the cert', async () => {
     vi.mocked(spawn).mockImplementationOnce((_, __) => {
       const emitter = new EventEmitter() as any;
