@@ -80,12 +80,20 @@ export const verifyOptions = async (options: PackagingOptions, manifestVars?: Ma
     if(!options.manifestVariables.packageDisplayName) log.warn('Neither package display name <packageDisplayName> nor app manifest <appManifest> provided. Using app executable as display name.');
     if(!options.manifestVariables.appExecutable) log.error('Neither app executable <appExecutable> nor app manifest <appManifest> provided.', true);
     if(!options.manifestVariables.targetArch) log.error('Neither target architecture <targetArch> nor app manifest <appManifest> provided.', true);
-    if(!options.manifestVariables.packageMinOSVersion) log.warn('Neither package min OS version <packageMinOSVersion> nor app manifest <appManifest> provided. Using default OS version 10.0.14393.0.');
-    if(!options.manifestVariables.packageMaxOSVersionTested) log.warn('Neither package max OS version tested <packageMaxOSVersionTested> nor app manifest <appManifest> provided. Using default OS version 10.0.14393.0.');
+    if(!options.manifestVariables.packageMinOSVersion) log.warn('Neither package min OS version <packageMinOSVersion> nor app manifest <appManifest> provided. Using default OS version 10.0.19041.0.');
+    if(!options.manifestVariables.packageMaxOSVersionTested) log.warn('Neither package max OS version tested <packageMaxOSVersionTested> nor app manifest <appManifest> provided. Using default OS version 10.0.19041.0.');
     if(!options.manifestVariables.packageIdentity) log.error('Neither package identity <packageIdentity> nor app manifest <appManifest> provided.', true);
     if(!options.manifestVariables.appDisplayName) log.warn('Neither app display name <appDisplayName> nor app manifest <appManifest> provided. Using app executable as display name.');
     if(!options.manifestVariables.packageDescription) log.warn('Neither package description <packageDescription> nor app manifest <appManifest> provided. Using app executable as description.');
     if(!options.manifestVariables.packageBackgroundColor) log.warn('Neither package background color <packageBackgroundColor> nor app manifest <appManifest> provided. Using default background color transparent.');
+    const cta = options.manifestVariables.comToastActivation;
+    if (cta?.toastActivatorClsid) {
+      const guid = cta.toastActivatorClsid.trim().replace(/^\{|\}$/g, '');
+      const guidOk = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(guid);
+      if (!guidOk) {
+        log.error('comToastActivation.toastActivatorClsid must be a valid GUID.', true, { toastActivatorClsid: cta.toastActivatorClsid });
+      }
+    }
     hasManifestParams = true;
   }
   if(!hasManifestParams && !options.appManifest) log.error('Neither app manifest <appManifest> nor manifest variables <manifestVariables> provided.', true);

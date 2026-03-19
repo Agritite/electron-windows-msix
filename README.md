@@ -51,6 +51,7 @@ appDisplayName            - The name of the MSIX package. This will be used to s
 targetArch                - The target architecture of the MSIX package. This will be used to set the ProcessorArchitecture attribute in the AppxManifest.xml. 'x64' |'arm64' | 'x86' | 'arm' | '*';
 packageMinOSVersion       - The minimum OS version the MSIX package requires. This will be used to set the MinVersion attribute in the TargetDeviceFamily element in theAppxManifest.xml.
 packageMaxOSVersionTested - The maximum OS version the MSIX package has been tested on. This will be used to set the MaxVersionTested attribute in the TargetDeviceFamily element in the AppxManifest.xml.
+comToastActivation        - Optional. Adds COM server (`windows.comServer`) and toast activation (`windows.toastNotificationActivation`) extensions so the packaged app can handle toast activations. Object with `toastActivatorClsid` (GUID, same for COM class and ToastActivatorCLSID). Optional: `arguments` (default -ToastActivated), `executable` (exe file name, default from appExecutable). Ignored when using `appManifest`.
 ```
 
 ### Minimal example that creates a manifest and a dev cert
@@ -66,6 +67,27 @@ await packageMSIX({
     packageVersion: '1.42.0.0',
     appExecutable: 'hellomsix.exe',
     targetArch: 'x64',
+  },
+});
+```
+
+### Toast / COM activation (generated manifest only)
+
+Register the same CLSID for a COM out-of-process server and for toast notification activation (see [Microsoft: Toast activations from desktop apps](https://learn.microsoft.com/en-us/windows/apps/develop/notifications/app-notifications/toast-desktop-apps)). You can pass the GUID with or without `{}`; the generated manifest writes it **without** braces, as MakeAppx expects.
+
+```ts
+await packageMSIX({
+  appDir: 'C:\\temp\\myapp',
+  outputDir: 'C:\\temp\\out',
+  manifestVariables: {
+    publisher: 'CN=Dev Publisher',
+    packageIdentity: 'com.example.app',
+    packageVersion: '1.0.0.0',
+    appExecutable: 'myapp.exe',
+    targetArch: 'x64',
+    comToastActivation: {
+      toastActivatorClsid: '{12345678-1234-4123-a123-123456789abc}',
+    },
   },
 });
 ```

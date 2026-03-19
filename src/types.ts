@@ -78,6 +78,29 @@ export interface ManifestGenerationVariables {
     * If a manifest is provided then this will be ignored.
     */
   packageMaxOSVersionTested ? : string;
+  /**
+   * When set, the generated manifest includes COM server registration and
+   * `windows.toastNotificationActivation` so packaged desktop apps can handle
+   * toast activations via the same CLSID.
+   * Ignored when using a pre-built `appManifest` file.
+   */
+  comToastActivation ? : ComToastActivationOptions;
+}
+
+/** Options for COM server + toast notification activation in AppxManifest. */
+export interface ComToastActivationOptions {
+  /**
+   * CLSID for the toast activator (same value as `ToastActivatorCLSID` and `com:Class Id`).
+   * With or without braces in options; the manifest omits braces (MakeAppx requirement).
+   */
+  toastActivatorClsid: string;
+  /** `Arguments` on `com:ExeServer`. Default `-ToastActivated`. */
+  arguments ? : string;
+  /**
+   * Executable file name only (e.g. `MyApp.exe`). Defaults to `appExecutable` basename.
+   * The manifest uses `app\\{executable}` to match the layout.
+   */
+  executable ? : string;
 }
 
 export interface PackagingOptions {

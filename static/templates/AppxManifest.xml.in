@@ -6,7 +6,8 @@
   xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
   xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
   xmlns:desktop2="http://schemas.microsoft.com/appx/manifest/desktop/windows10/2"
-  IgnorableNamespaces="uap uap3 desktop2">
+  {{ComXmlns}}
+  IgnorableNamespaces="uap uap3 desktop2{{IgnorableNamespacesCom}}">
   <Identity Name="{{IdentityName}}"
           ProcessorArchitecture="{{ProcessorArchitecture}}"
           Version="{{Version}}"
@@ -35,6 +36,7 @@
           Square150x150Logo="assets\Square150x150Logo.png"
           BackgroundColor="{{PackageBackgroundColor}}">
       </uap:VisualElements>
+{{ApplicationExtensions}}
     </Application>
   </Applications>
 </Package>
