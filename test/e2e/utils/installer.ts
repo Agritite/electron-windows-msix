@@ -16,4 +16,13 @@ export const checkInstall = async (name: string, version?: string) => {
     name: fields[0],
     version: fields[1],
   }
+};
+
+export async function readAppxManifestFromMsix(msixPath: string): Promise<string> {
+  const p = msixPath.replace(/'/g, "''");
+  return (
+    await powershell(
+      `Add-Type -AssemblyName System.IO.Compression.FileSystem; $z = [System.IO.Compression.ZipFile]::OpenRead('${p}'); try { $e = $z.GetEntry('AppxManifest.xml'); $r = New-Object System.IO.StreamReader($e.Open()); $r.ReadToEnd() } finally { $z.Dispose() }`
+    )
+  ).trim();
 }

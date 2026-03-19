@@ -4,6 +4,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 
 import { packageMSIX } from "../../src/index";
 import { installDevCert } from './utils/cert';
+import { readAppxManifestFromMsix } from './utils/installer';
 
 describe('packaging', () => {
   beforeAll(async () => {
@@ -41,6 +42,46 @@ describe('packaging', () => {
       windowsKitVersion: '10.0.26100.0',
     });
     expect(fs.existsSync(path.join(__dirname, '..', '..', 'out', 'hellomsix_x64.msix'))).toBe(true);
+  });
+
+  it('should package with comToastActivation and embed COM + toast extensions in AppxManifest', async () => {
+    const toastClsid = 'A0E0E0E0-E0E0-4AE0-A0E0-E0E0E0E0E0E0';
+    await packageMSIX({
+      appDir: path.join(__dirname, 'fixtures', 'app-x64'),
+      outputDir: path.join(__dirname, '..', '..', 'out'),
+      manifestVariables: {
+        appDisplayName: 'Hello MSIX',
+        publisher: 'CN=Dev Publisher',
+        publisherDisplayName: 'Dev Publisher',
+        packageDisplayName: 'Hello MSIX',
+        packageDescription: 'Just a test app',
+        packageBackgroundColor: '#000000',
+        packageIdentity: 'com.example.app',
+        packageVersion: '1.42.0.0',
+        appExecutable: 'hellomsix.exe',
+        targetArch: 'x64',
+        packageMinOSVersion: '10.0.19041.0',
+        packageMaxOSVersionTested: '10.0.19041.0',
+        comToastActivation: {
+          toastActivatorClsid: toastClsid,
+        },
+      },
+      windowsKitVersion: '10.0.26100.0',
+      sign: false,
+    });
+    const msixPath = path.join(__dirname, '..', '..', 'out', 'hellomsix_x64.msix');
+    expect(fs.existsSync(msixPath)).toBe(true);
+    const manifestXml = await readAppxManifestFromMsix(msixPath);
+    expect(manifestXml).toContain('xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"');
+    expect(manifestXml).toMatch(/IgnorableNamespaces="[^"]*\bcom\b/);
+    expect(manifestXml).toContain('Category="windows.comServer"');
+    expect(manifestXml).toContain('Category="windows.toastNotificationActivation"');
+    expect(manifestXml).toContain(
+      'ToastActivatorCLSID="a0e0e0e0-e0e0-4ae0-a0e0-e0e0e0e0e0e0"'
+    );
+    expect(manifestXml).toMatch(
+      /<com:ExeServer[^>]*Executable="app\\hellomsix\.exe"[^>]*Arguments="-ToastActivated"/
+    );
   });
 
   it('should package the app with prerelease version manifest variables', async () => {
