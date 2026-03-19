@@ -258,6 +258,46 @@ describe('utils', () => {
         expect(log.error).toHaveBeenCalledWith('Neither package identity <packageIdentity> nor app manifest <appManifest> provided.', true);
       });
 
+      it('should throw an error if comToastActivation CLSID is invalid', async () => {
+        const packagingOptions: PackagingOptions = {
+          ...incompletePackagingOptions,
+          manifestVariables: {
+            packageVersion: '1.0.0',
+            publisher: 'Electron',
+            appExecutable: 'C:\\app\\app.exe',
+            targetArch: 'x64',
+            packageIdentity: 'com.app',
+            comToastActivation: { toastActivatorClsid: 'not-a-guid' },
+          } as any
+        }
+        await verifyOptions(packagingOptions);
+        expect(log.error).toHaveBeenCalledWith('comToastActivation.toastActivatorClsid must be a valid GUID.', true, { toastActivatorClsid: 'not-a-guid' });
+      });
+
+      it('should not error when comToastActivation CLSID is valid', async () => {
+        vi.mocked(log.error).mockClear();
+        const packagingOptions: PackagingOptions = {
+          ...incompletePackagingOptions,
+          manifestVariables: {
+            packageVersion: '1.0.0',
+            publisher: 'Electron',
+            appExecutable: 'C:\\app\\app.exe',
+            targetArch: 'x64',
+            packageIdentity: 'com.app',
+            comToastActivation: {
+              toastActivatorClsid: '{11111111-2222-3333-4444-555555555555}',
+            },
+          } as any,
+        };
+        vi.mocked(fs.exists).mockResolvedValue(true as any);
+        await verifyOptions(packagingOptions);
+        expect(log.error).not.toHaveBeenCalledWith(
+          'comToastActivation.toastActivatorClsid must be a valid GUID.',
+          true,
+          expect.anything()
+        );
+      });
+
       it('should warn if no publisher display name is provided', async () => {
         const packagingOptions: PackagingOptions = {
           ...incompletePackagingOptions,
@@ -305,7 +345,7 @@ describe('utils', () => {
         }
         vi.mocked(fs.exists).mockResolvedValue(true as any);
         await verifyOptions(packagingOptions);
-        expect(log.warn).toHaveBeenCalledWith('Neither package min OS version <packageMinOSVersion> nor app manifest <appManifest> provided. Using default OS version 10.0.14393.0.');
+        expect(log.warn).toHaveBeenCalledWith('Neither package min OS version <packageMinOSVersion> nor app manifest <appManifest> provided. Using default OS version 10.0.19041.0.');
       });
 
       it('should warn if no packageMaxOSVersionTested is provided', async () => {
@@ -318,12 +358,12 @@ describe('utils', () => {
             targetArch: 'x64',
             packageIdentity: 'Electron.App',
             publisherDisplayName: 'Electron',
-            packageMinOSVersion: '10.0.14393.0',
+            packageMinOSVersion: '10.0.19041.0',
           } as any
         }
         vi.mocked(fs.exists).mockResolvedValue(true as any);
         await verifyOptions(packagingOptions);
-        expect(log.warn).toHaveBeenCalledWith('Neither package max OS version tested <packageMaxOSVersionTested> nor app manifest <appManifest> provided. Using default OS version 10.0.14393.0.');
+        expect(log.warn).toHaveBeenCalledWith('Neither package max OS version tested <packageMaxOSVersionTested> nor app manifest <appManifest> provided. Using default OS version 10.0.19041.0.');
       });
 
       it('should warn if no appDisplayName is provided', async () => {
@@ -336,8 +376,8 @@ describe('utils', () => {
             targetArch: 'x64',
             packageIdentity: 'Electron.App',
             publisherDisplayName: 'Electron',
-            packageMinOSVersion: '10.0.14393.0',
-            packageMaxOSVersionTested: '10.0.14393.0',
+            packageMinOSVersion: '10.0.19041.0',
+            packageMaxOSVersionTested: '10.0.19041.0',
           } as any
         }
         vi.mocked(fs.exists).mockResolvedValue(true as any);
@@ -355,8 +395,8 @@ describe('utils', () => {
             targetArch: 'x64',
             packageIdentity: 'Electron.App',
             publisherDisplayName: 'Electron',
-            packageMinOSVersion: '10.0.14393.0',
-            packageMaxOSVersionTested: '10.0.14393.0',
+            packageMinOSVersion: '10.0.19041.0',
+            packageMaxOSVersionTested: '10.0.19041.0',
             appDisplayName: 'Electron',
           } as any
         }
@@ -375,8 +415,8 @@ describe('utils', () => {
             targetArch: 'x64',
             packageIdentity: 'Electron.App',
             publisherDisplayName: 'Electron',
-            packageMinOSVersion: '10.0.14393.0',
-            packageMaxOSVersionTested: '10.0.14393.0',
+            packageMinOSVersion: '10.0.19041.0',
+            packageMaxOSVersionTested: '10.0.19041.0',
             appDisplayName: 'Electron',
             packageDescription: 'Electron',
           } as any
@@ -557,8 +597,8 @@ describe('utils', () => {
           targetArch: 'x64',
           packageIdentity: 'Electron.App',
           publisherDisplayName: 'Electron',
-          packageMinOSVersion: '10.0.14393.0',
-          packageMaxOSVersionTested: '10.0.14393.0',
+          packageMinOSVersion: '10.0.19041.0',
+          packageMaxOSVersionTested: '10.0.19041.0',
           appDisplayName: 'app display name',
         } as any
       }
@@ -583,7 +623,7 @@ describe('utils', () => {
       }
 
       const manifestVariables : ManifestVariables =  {
-        manifestOsMinVersion: '10.0.14393.0',
+        manifestOsMinVersion: '10.0.19041.0',
         manifestAppName: 'app',
         manifestPackageArch: 'x64',
         manifestIsSparsePackage: false,

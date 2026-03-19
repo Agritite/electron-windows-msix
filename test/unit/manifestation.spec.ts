@@ -3,7 +3,7 @@ import { expect, describe, it, vi } from 'vitest'
 
 import { makeProgramOptions } from '../../src/utils';
 import { ManifestGenerationVariables, PackagingOptions } from '../../src/types';
-import { getManifestVariables, manifest } from '../../src/manifestation';
+import { getManifestVariables, manifest, normalizeToastActivatorClsid } from '../../src/manifestation';
 
 vi.mock('fs-extra', async (importOriginal) => {
   const actual = await importOriginal() as Record < string,
@@ -111,7 +111,7 @@ describe('manifestation', () => {
       expect(appManifestIn).toMatch(/<DisplayName>HelloMSIX<\/DisplayName>/);
       expect(appManifestIn).toMatch(/<PublisherDisplayName>Jan Hannemann<\/PublisherDisplayName>/);
       expect(appManifestIn).toMatch(/<Logo>assets\\icon.png<\/Logo>/);
-      expect(appManifestIn).toMatch(/<TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.14393.0" MaxVersionTested="10.0.14393.0" \/>/);
+      expect(appManifestIn).toMatch(/<TargetDeviceFamily Name="Windows\.Desktop" MinVersion="[\d.]+" MaxVersionTested="[\d.]+" \/>/);
       expect(appManifestIn).toMatch(/<Application Id="App"  Executable="app\\HelloMSIX.exe" EntryPoint="Windows.FullTrustApplication">/);
       expect(appManifestIn).toMatch(/DisplayName="HelloMSIX"/);
       expect(appManifestIn).toMatch(/Description="HelloMSIX"/);
@@ -182,7 +182,6 @@ describe('manifestation', () => {
       expect(appManifestIn).toMatch(/Description="Custom App Display Name"/);
     });
 
-
     it('should return null if no manifest variables are provided', async () => {
       const packagingOptions: PackagingOptions = {
         ...minimalPackagingOptions,
@@ -190,6 +189,79 @@ describe('manifestation', () => {
       }
       const appManifestIn = await manifest(packagingOptions);
       expect(appManifestIn).toBeNull();
+    });
+
+    it('should add COM server and toast activation extensions when comToastActivation is set', async () => {
+      const guid = 'A1B2C3D4-E5F6-7890-ABCD-EF1234567890';
+      const packagingOptions: PackagingOptions = {
+        ...minimalPackagingOptions,
+        manifestVariables: {
+          ...minimalManifestVariables,
+          comToastActivation: {
+            toastActivatorClsid: guid,
+            arguments: '-ToastActivated',
+          },
+        },
+      };
+      const appManifestIn = await manifest(packagingOptions);
+      expect(appManifestIn).toContain(
+        'xmlns:com="http://schemas.microsoft.com/appx/manifest/com/windows10"'
+      );
+      expect(appManifestIn).toMatch(/IgnorableNamespaces="[^"]*\bcom\b/);
+      expect(appManifestIn).toMatch(
+        /<com:Extension Category="windows\.comServer">[\s\S]*<com:ExeServer Executable="app\\HelloMSIX\.exe" Arguments="-ToastActivated">/
+      );
+      expect(appManifestIn).toContain(
+        '<com:Class Id="a1b2c3d4-e5f6-7890-abcd-ef1234567890"/>'
+      );
+      expect(appManifestIn).toContain(
+        '<desktop:ToastNotificationActivation ToastActivatorCLSID="a1b2c3d4-e5f6-7890-abcd-ef1234567890" />'
+      );
+    });
+
+    it('should use default arguments when omitted', async () => {
+      const packagingOptions: PackagingOptions = {
+        ...minimalPackagingOptions,
+        manifestVariables: {
+          ...minimalManifestVariables,
+          comToastActivation: {
+            toastActivatorClsid: 'BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB',
+          },
+        },
+      };
+      const appManifestIn = await manifest(packagingOptions);
+      expect(appManifestIn).toMatch(
+        /<com:ExeServer Executable="app\\HelloMSIX\.exe" Arguments="-ToastActivated">/
+      );
+      expect(appManifestIn).toContain(
+        '<com:Class Id="bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"/>'
+      );
+    });
+
+    it('should escape XML in comToastActivation arguments', async () => {
+      const packagingOptions: PackagingOptions = {
+        ...minimalPackagingOptions,
+        manifestVariables: {
+          ...minimalManifestVariables,
+          comToastActivation: {
+            toastActivatorClsid: '11111111-2222-3333-4444-555555555555',
+            arguments: '-x &amp;',
+          },
+        },
+      };
+      const appManifestIn = await manifest(packagingOptions);
+      expect(appManifestIn).toContain('Arguments="-x &amp;amp;"');
+    });
+  });
+
+  describe('normalizeToastActivatorClsid', () => {
+    it('normalizes GUID with or without braces to lowercase braced form', () => {
+      expect(normalizeToastActivatorClsid('{ABCDEF01-2345-6789-ABCD-EF0123456789}')).toBe(
+        '{abcdef01-2345-6789-abcd-ef0123456789}'
+      );
+      expect(normalizeToastActivatorClsid('ABCDEF01-2345-6789-ABCD-EF0123456789')).toBe(
+        '{abcdef01-2345-6789-abcd-ef0123456789}'
+      );
     });
   });
 });
