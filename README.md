@@ -76,6 +76,8 @@ await packageMSIX({
 Register the same CLSID for a COM out-of-process server and for toast notification activation (see [Microsoft: Toast activations from desktop apps](https://learn.microsoft.com/en-us/windows/apps/develop/notifications/app-notifications/toast-desktop-apps)). You can pass the GUID with or without `{}`; the generated manifest writes it **without** braces, as MakeAppx expects.
 
 ```ts
+import { packageMSIX } from "electron-windows-msix";
+
 await packageMSIX({
   appDir: 'C:\\temp\\myapp',
   outputDir: 'C:\\temp\\out',

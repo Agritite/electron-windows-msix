@@ -17,7 +17,8 @@ function escapeXmlAttr(value: string): string {
     .replace(/&/g, '&amp;')
     .replace(/"/g, '&quot;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+    .replace(/>/g, '&gt;')
+    .replace(/'/g, '&apos;');
 }
 
 /**
@@ -46,7 +47,7 @@ export function buildComToastActivationXml(
 ): { comXmlns: string; ignorableCom: string; applicationExtensions: string } {
   const clsid = normalizeToastActivatorClsid(opts.toastActivatorClsid, false);
   const exeName = path.basename(opts.executable?.trim() || appExecutableFileName);
-  const exePath = `app\\${exeName}`;
+  const exePath = `app\\${escapeXmlAttr(exeName)}`;
   const args = escapeXmlAttr(opts.arguments ?? '-ToastActivated');
 
   const extensions = getComToastExtensionsTemplate();

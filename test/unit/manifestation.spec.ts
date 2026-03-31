@@ -238,6 +238,23 @@ describe('manifestation', () => {
       );
     });
 
+    it('should escape XML in comToastActivation executable basename', async () => {
+      const packagingOptions: PackagingOptions = {
+        ...minimalPackagingOptions,
+        manifestVariables: {
+          ...minimalManifestVariables,
+          comToastActivation: {
+            toastActivatorClsid: '11111111-2222-3333-4444-555555555555',
+            executable: `my&app"test'exe.exe`,
+          },
+        },
+      };
+      const appManifestIn = await manifest(packagingOptions);
+      expect(appManifestIn).toContain(
+        'Executable="app\\my&amp;app&quot;test&apos;exe.exe"'
+      );
+    });
+
     it('should escape XML in comToastActivation arguments', async () => {
       const packagingOptions: PackagingOptions = {
         ...minimalPackagingOptions,
@@ -251,6 +268,21 @@ describe('manifestation', () => {
       };
       const appManifestIn = await manifest(packagingOptions);
       expect(appManifestIn).toContain('Arguments="-x &amp;amp;"');
+    });
+
+    it('should escape apostrophes in comToastActivation arguments', async () => {
+      const packagingOptions: PackagingOptions = {
+        ...minimalPackagingOptions,
+        manifestVariables: {
+          ...minimalManifestVariables,
+          comToastActivation: {
+            toastActivatorClsid: '11111111-2222-3333-4444-555555555555',
+            arguments: "-x O'Brien",
+          },
+        },
+      };
+      const appManifestIn = await manifest(packagingOptions);
+      expect(appManifestIn).toContain('Arguments="-x O&apos;Brien"');
     });
   });
 
