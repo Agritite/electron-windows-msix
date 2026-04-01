@@ -258,6 +258,46 @@ describe('utils', () => {
         expect(log.error).toHaveBeenCalledWith('Neither package identity <packageIdentity> nor app manifest <appManifest> provided.', true);
       });
 
+      it('should throw an error if comToastActivation CLSID is invalid', async () => {
+        const packagingOptions: PackagingOptions = {
+          ...incompletePackagingOptions,
+          manifestVariables: {
+            packageVersion: '1.0.0',
+            publisher: 'Electron',
+            appExecutable: 'C:\\app\\app.exe',
+            targetArch: 'x64',
+            packageIdentity: 'com.app',
+            comToastActivation: { toastActivatorClsid: 'not-a-guid' },
+          } as any
+        }
+        await verifyOptions(packagingOptions);
+        expect(log.error).toHaveBeenCalledWith('comToastActivation.toastActivatorClsid must be a valid GUID.', true, { toastActivatorClsid: 'not-a-guid' });
+      });
+
+      it('should not error when comToastActivation CLSID is valid', async () => {
+        vi.mocked(log.error).mockClear();
+        const packagingOptions: PackagingOptions = {
+          ...incompletePackagingOptions,
+          manifestVariables: {
+            packageVersion: '1.0.0',
+            publisher: 'Electron',
+            appExecutable: 'C:\\app\\app.exe',
+            targetArch: 'x64',
+            packageIdentity: 'com.app',
+            comToastActivation: {
+              toastActivatorClsid: '{11111111-2222-3333-4444-555555555555}',
+            },
+          } as any,
+        };
+        vi.mocked(fs.exists).mockResolvedValue(true as any);
+        await verifyOptions(packagingOptions);
+        expect(log.error).not.toHaveBeenCalledWith(
+          'comToastActivation.toastActivatorClsid must be a valid GUID.',
+          true,
+          expect.anything()
+        );
+      });
+
       it('should warn if no publisher display name is provided', async () => {
         const packagingOptions: PackagingOptions = {
           ...incompletePackagingOptions,
@@ -305,7 +345,7 @@ describe('utils', () => {
         }
         vi.mocked(fs.exists).mockResolvedValue(true as any);
         await verifyOptions(packagingOptions);
-        expect(log.warn).toHaveBeenCalledWith('Neither package min OS version <packageMinOSVersion> nor app manifest <appManifest> provided. Using default OS version 10.0.14393.0.');
+        expect(log.warn).toHaveBeenCalledWith('Neither package min OS version <packageMinOSVersion> nor app manifest <appManifest> provided. Using default OS version 10.0.19041.0.');
       });
 
       it('should warn if no packageMaxOSVersionTested is provided', async () => {
@@ -318,12 +358,12 @@ describe('utils', () => {
             targetArch: 'x64',
             packageIdentity: 'Electron.App',
             publisherDisplayName: 'Electron',
-            packageMinOSVersion: '10.0.14393.0',
+            packageMinOSVersion: '10.0.19041.0',
           } as any
         }
         vi.mocked(fs.exists).mockResolvedValue(true as any);
         await verifyOptions(packagingOptions);
-        expect(log.warn).toHaveBeenCalledWith('Neither package max OS version tested <packageMaxOSVersionTested> nor app manifest <appManifest> provided. Using default OS version 10.0.14393.0.');
+        expect(log.warn).toHaveBeenCalledWith('Neither package max OS version tested <packageMaxOSVersionTested> nor app manifest <appManifest> provided. Using default OS version 10.0.19041.0.');
       });
 
       it('should warn if no appDisplayName is provided', async () => {
@@ -336,8 +376,8 @@ describe('utils', () => {
             targetArch: 'x64',
             packageIdentity: 'Electron.App',
             publisherDisplayName: 'Electron',
-            packageMinOSVersion: '10.0.14393.0',
-            packageMaxOSVersionTested: '10.0.14393.0',
+            packageMinOSVersion: '10.0.19041.0',
+            packageMaxOSVersionTested: '10.0.19041.0',
           } as any
         }
         vi.mocked(fs.exists).mockResolvedValue(true as any);
@@ -355,8 +395,8 @@ describe('utils', () => {
             targetArch: 'x64',
             packageIdentity: 'Electron.App',
             publisherDisplayName: 'Electron',
-            packageMinOSVersion: '10.0.14393.0',
-            packageMaxOSVersionTested: '10.0.14393.0',
+            packageMinOSVersion: '10.0.19041.0',
+            packageMaxOSVersionTested: '10.0.19041.0',
             appDisplayName: 'Electron',
           } as any
         }
@@ -375,8 +415,8 @@ describe('utils', () => {
             targetArch: 'x64',
             packageIdentity: 'Electron.App',
             publisherDisplayName: 'Electron',
-            packageMinOSVersion: '10.0.14393.0',
-            packageMaxOSVersionTested: '10.0.14393.0',
+            packageMinOSVersion: '10.0.19041.0',
+            packageMaxOSVersionTested: '10.0.19041.0',
             appDisplayName: 'Electron',
             packageDescription: 'Electron',
           } as any
@@ -557,8 +597,8 @@ describe('utils', () => {
           targetArch: 'x64',
           packageIdentity: 'Electron.App',
           publisherDisplayName: 'Electron',
-          packageMinOSVersion: '10.0.14393.0',
-          packageMaxOSVersionTested: '10.0.14393.0',
+          packageMinOSVersion: '10.0.19041.0',
+          packageMaxOSVersionTested: '10.0.19041.0',
           appDisplayName: 'app display name',
         } as any
       }
@@ -583,7 +623,7 @@ describe('utils', () => {
       }
 
       const manifestVariables : ManifestVariables =  {
-        manifestOsMinVersion: '10.0.14393.0',
+        manifestOsMinVersion: '10.0.19041.0',
         manifestAppName: 'app',
         manifestPackageArch: 'x64',
         manifestIsSparsePackage: false,
@@ -828,6 +868,37 @@ describe('utils', () => {
       expect(log.debug).toHaveBeenCalledWith('No WindowsKitVersion provided. Will try AppxManifest.xml min OS version next.');
     });
 
+    it('should skip app manifest block and use default binaries when no appManifest and no packageMinOSVersion', async () => {
+      const packagingOptions: PackagingOptions = {
+        ...minimalPackagingOptions,
+        appManifest: undefined,
+        manifestVariables: {
+          publisher: 'Electron',
+          packageIdentity: 'com.electron.app',
+          packageVersion: '1.0.0.0',
+          appExecutable: 'app.exe',
+          targetArch: 'x64',
+        } as any,
+      }
+      vi.mocked(fs.pathExists).mockResolvedValueOnce(true as any);
+      const binaries = await locateMSIXTooling(packagingOptions);
+      expect(log.debug).toHaveBeenCalledWith('No information on WindowsKitVersion was provided, using default binaries. Checking if it exists....', expect.any(Object));
+      expect(binaries).toBeDefined();
+      expect(binaries?.makeAppx).toContain('10.0.26100.0');
+    });
+
+    it('should skip app manifest block when no appManifest and manifestVariables has no packageMinOSVersion', async () => {
+      const packagingOptions: PackagingOptions = {
+        appDir: 'C:\\app',
+        outputDir: 'C:\\out',
+        manifestVariables: undefined,
+      } as any
+      vi.mocked(fs.pathExists).mockResolvedValueOnce(true as any);
+      const binaries = await locateMSIXTooling(packagingOptions);
+      expect(log.debug).toHaveBeenCalledWith('No information on WindowsKitVersion was provided, using default binaries. Checking if it exists....', expect.any(Object));
+      expect(binaries).toBeDefined();
+    });
+
     it('should return x64 binaries if the target arch is arm64 and the windows kit version is older than 10.0.22621.0', async () => {
       const packagingOptions: PackagingOptions = {
         ...minimalPackagingOptions,
@@ -874,6 +945,23 @@ describe('utils', () => {
       }
       await locateMSIXTooling(packagingOptions, { manifestPackageArch: 'arm64' } as any);
       expect(log.error).toHaveBeenCalledWith("Couldn't find Windows Kit version in AppManifest.");
+    });
+
+    it('should use packageMinOSVersion from manifestVariables when appManifest is not set', async () => {
+      const packagingOptions: PackagingOptions = {
+        ...minimalPackagingOptions,
+        appManifest: undefined,
+        manifestVariables: {
+          ...minimalPackagingOptions.manifestVariables,
+          packageMinOSVersion: '10.0.22621.0',
+        } as any,
+      }
+      const binaries = await locateMSIXTooling(packagingOptions);
+      expect(binaries).toStrictEqual({
+        makeAppx: 'C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.22621.0\\x64\\makeappx.exe',
+        makePri: 'C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.22621.0\\x64\\makepri.exe',
+        makeCert: 'C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.22621.0\\x64\\makecert.exe',
+        signTool: 'C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.22621.0\\x64\\SignTool.exe'});
     });
 
     it('should return x64 binaries if the target arch is arm64 and the windows kit version is older than 10.0.22621.0', async () => {

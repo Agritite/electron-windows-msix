@@ -1,16 +1,70 @@
 import * as path from "path";
 import fs from "fs-extra";
 
-import { ManifestVariables, PackagingOptions } from "./types";
+import { ComToastActivationOptions, ManifestVariables, PackagingOptions } from "./types";
 import { removeFileExtension, removePublisherPrefix } from "./utils";
 import { ensureWindowsVersion } from "./win-version";
 
 
-const DEFAULT_OS_VERSION = '10.0.14393.0';
+const DEFAULT_OS_VERSION = '10.0.19041.0';
 const DEFAULT_BACKGROUND_COLOR = 'transparent';
 
+const TEMPLATES_DIR = path.join(__dirname, '../static/templates');
+const COM_MANIFEST_NS = 'http://schemas.microsoft.com/appx/manifest/com/windows10';
+
+function escapeXmlAttr(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/'/g, '&apos;');
+}
+
+/**
+ * Normalize toast activator CLSID: trim, strip optional braces, lowercase hex.
+ * @param braced - If `true` (default), `{guid}`; if `false`, `guid` for Appx manifest attributes (no braces).
+ */
+export function normalizeToastActivatorClsid(raw: string, braced = true): string {
+  const inner = raw.trim().replace(/^\{/, '').replace(/\}$/, '').toLowerCase();
+  return braced ? `{${inner}}` : inner;
+}
+
+let comToastExtensionsTemplateCache: string | null = null;
+
+function getComToastExtensionsTemplate(): string {
+  if (comToastExtensionsTemplateCache === null) {
+    comToastExtensionsTemplateCache = fs
+      .readFileSync(path.join(TEMPLATES_DIR, 'ComToastActivation.xml.in'), 'utf-8')
+      .trimEnd();
+  }
+  return comToastExtensionsTemplateCache;
+}
+
+export function buildComToastActivationXml(
+  opts: ComToastActivationOptions,
+  appExecutableFileName: string
+): { comXmlns: string; ignorableCom: string; applicationExtensions: string } {
+  const clsid = normalizeToastActivatorClsid(opts.toastActivatorClsid, false);
+  const exeName = path.basename(opts.executable?.trim() || appExecutableFileName);
+  const exePath = `app\\${escapeXmlAttr(exeName)}`;
+  const args = escapeXmlAttr(opts.arguments ?? '-ToastActivated');
+
+  const extensions = getComToastExtensionsTemplate();
+  const applicationExtensions = extensions
+    .replace(/\{\{ExeServerExecutable\}\}/g, exePath)
+    .replace(/\{\{ExeServerArguments\}\}/g, args)
+    .replace(/\{\{ToastActivatorClsid\}\}/g, clsid);
+
+  return {
+    comXmlns: `xmlns:com="${COM_MANIFEST_NS}"`,
+    ignorableCom: ' com',
+    applicationExtensions,
+  };
+}
+
 const getTemplate = () => {
-  const content = fs.readFileSync(path.join(__dirname, `../static/templates/AppxManifest.xml.in`), 'utf-8');
+  const content = fs.readFileSync(path.join(TEMPLATES_DIR, 'AppxManifest.xml.in'), 'utf-8');
   return content;
 };
 
@@ -94,11 +148,21 @@ export const manifest = async (options: PackagingOptions) => {
     appExecutable,
     targetArch,
     packageDescription,
-    packageBackgroundColor
+    packageBackgroundColor,
+    comToastActivation,
   } = options.manifestVariables;
   const appName = removeFileExtension(appExecutable);
   const publisherName = removePublisherPrefix(publisher);
   const version = ensureWindowsVersion(packageVersion);
+  let comXmlns = '';
+  let ignorableNamespacesCom = '';
+  let applicationExtensions = '';
+  if (comToastActivation?.toastActivatorClsid) {
+    const built = buildComToastActivationXml(comToastActivation, appExecutable);
+    comXmlns = built.comXmlns;
+    ignorableNamespacesCom = built.ignorableCom;
+    applicationExtensions = built.applicationExtensions;
+  }
   const manifest = template
     .replace(/{{IdentityName}}/g, packageIdentity)
     .replace(/{{AppDisplayName}}/g, appDisplayName || packageDisplayName || appName)
@@ -111,7 +175,10 @@ export const manifest = async (options: PackagingOptions) => {
     .replace(/{{PackageDescription}}/g, packageDescription || packageDisplayName || appDisplayName || appName)
     .replace(/{{PackageBackgroundColor}}/g, packageBackgroundColor || DEFAULT_BACKGROUND_COLOR)
     .replace(/{{AppExecutable}}/g, appExecutable)
-    .replace(/{{ProcessorArchitecture}}/g, targetArch);
+    .replace(/{{ProcessorArchitecture}}/g, targetArch)
+    .replace(/{{ComXmlns}}/g, comXmlns)
+    .replace(/{{IgnorableNamespacesCom}}/g, ignorableNamespacesCom)
+    .replace(/{{ApplicationExtensions}}/g, applicationExtensions);
 
   return manifest;
 };

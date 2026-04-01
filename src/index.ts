@@ -1,10 +1,10 @@
 import { make, pri, priConfig, sign } from './bin';
 import { ensureDevCert } from './cert';
 import { getManifestVariables } from './manifestation';
-import { type Artifacts, type ManifestGenerationVariables, type PackagingOptions, type WindowsSignOptions } from './types';
+import { type Artifacts, type ComToastActivationOptions, type ManifestGenerationVariables, type PackagingOptions, type WindowsSignOptions } from './types';
 import { createLayout, ensureFolders, makeProgramOptions, setLogLevel, verifyOptions } from './utils';
 
-export type { PackagingOptions, ManifestGenerationVariables, Artifacts, WindowsSignOptions };
+export type { PackagingOptions, ManifestGenerationVariables, ComToastActivationOptions, Artifacts, WindowsSignOptions };
 
 export const packageMSIX = async (options: PackagingOptions) => {
   setLogLevel(options);
