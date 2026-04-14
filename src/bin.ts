@@ -68,12 +68,14 @@ export const getCertPublisher = async (cert: string, cert_pass: string) => {
 
 export const priConfig = async (program: ProgramOptions) => {
   const { makePri, priConfigPath, createPriConfig, createPri } = program;
-  if(createPri && createPriConfig) {
+  if (!createPri) {
+    log.debug('Skipping making pri config because pri creation is disabled.');
+  } else if(!createPriConfig) {
+    log.debug('Skipping making pri config because user provides their own pri config.');
+  } else {
     const args = ['createconfig', '/cf', priConfigPath, '/dq', 'en-US'];
     log.debug('Creating pri config.')
     await run(makePri, args);
-  } else {
-    log.debug('Skipping making pri config.');
   }
 }
 
